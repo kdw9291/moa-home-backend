@@ -1,0 +1,55 @@
+{
+  "_note": "위 공고들의 주택형 전체 응답",
+  "data": [
+    {
+      "HOUSE_MANAGE_NO": "2026930031",
+      "HOUSE_TY": "059.9979A",
+      "LTTOT_TOP_AMOUNT": "80170",
+      "MODEL_NO": "01",
+      "PBLANC_NO": "2026930031",
+      "SPSPLY_HSHLDCO": 1,
+      "SUPLY_AR": "81.3053",
+      "SUPLY_HSHLDCO": 0
+    },
+    {
+      "HOUSE_MANAGE_NO": "2026930031",
+      "HOUSE_TY": "059.9960B",
+      "LTTOT_TOP_AMOUNT": "86670",
+      "MODEL_NO": "02",
+      "PBLANC_NO": "2026930031",
+      "SPSPLY_HSHLDCO": 0,
+      "SUPLY_AR": "80.9982",
+      "SUPLY_HSHLDCO": 1
+    },
+    {
+      "HOUSE_MANAGE_NO": "2026910243",
+      "HOUSE_TY": "084.7214B",
+      "LTTOT_TOP_AMOUNT": "35400",
+      "MODEL_NO": "01",
+      "PBLANC_NO": "2026910243",
+      "SPSPLY_HSHLDCO": 0,
+      "SUPLY_AR": null,
+      "SUPLY_HSHLDCO": 1
+    },
+    {
+      "HOUSE_MANAGE_NO": "2026910243",
+      "HOUSE_TY": "099.8624A",
+      "LTTOT_TOP_AMOUNT": "39338",
+      "MODEL_NO": "02",
+      "PBLANC_NO": "2026910243",
+      "SPSPLY_HSHLDCO": 0,
+      "SUPLY_AR": null,
+      "SUPLY_HSHLDCO": 1
+    },
+    {
+      "HOUSE_MANAGE_NO": "2026930040",
+      "HOUSE_TY": "084.9811C",
+      "LTTOT_TOP_AMOUNT": "122202",
+      "MODEL_NO": "01",
+      "PBLANC_NO": "2026930040",
+      "SPSPLY_HSHLDCO": 0,
+      "SUPLY_AR": "105.8939",
+      "SUPLY_HSHLDCO": 1
+    }
+  ]
+}

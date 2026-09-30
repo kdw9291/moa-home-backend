@@ -1,0 +1,82 @@
+{
+  "_note": "위 공고들의 주택형 전체 응답",
+  "data": [
+    {
+      "EXCLUSE_AR": "84.8507",
+      "GP": "-",
+      "HOUSE_MANAGE_NO": "2026950083",
+      "MODEL_NO": "02",
+      "PBLANC_NO": "2026950083",
+      "SUBSCRPT_REQST_AMOUNT": "100",
+      "SUPLY_AMOUNT": "47875",
+      "SUPLY_HSHLDCO": 36,
+      "TP": "84OB"
+    },
+    {
+      "EXCLUSE_AR": "84.6525",
+      "GP": "-",
+      "HOUSE_MANAGE_NO": "2026950083",
+      "MODEL_NO": "01",
+      "PBLANC_NO": "2026950083",
+      "SUBSCRPT_REQST_AMOUNT": "100",
+      "SUPLY_AMOUNT": "49074",
+      "SUPLY_HSHLDCO": 72,
+      "TP": "84OA"
+    },
+    {
+      "EXCLUSE_AR": "22.7300",
+      "GP": "-",
+      "HOUSE_MANAGE_NO": "2026950073",
+      "MODEL_NO": "01",
+      "PBLANC_NO": "2026950073",
+      "SUBSCRPT_REQST_AMOUNT": "300",
+      "SUPLY_AMOUNT": "32443",
+      "SUPLY_HSHLDCO": 5,
+      "TP": "37OE"
+    },
+    {
+      "EXCLUSE_AR": "27.7700",
+      "GP": "-",
+      "HOUSE_MANAGE_NO": "2026950073",
+      "MODEL_NO": "02",
+      "PBLANC_NO": "2026950073",
+      "SUBSCRPT_REQST_AMOUNT": "300",
+      "SUPLY_AMOUNT": "38973",
+      "SUPLY_HSHLDCO": 1,
+      "TP": "45OD"
+    },
+    {
+      "EXCLUSE_AR": "29.5600",
+      "GP": "-",
+      "HOUSE_MANAGE_NO": "2026950073",
+      "MODEL_NO": "05",
+      "PBLANC_NO": "2026950073",
+      "SUBSCRPT_REQST_AMOUNT": "300",
+      "SUPLY_AMOUNT": "40942",
+      "SUPLY_HSHLDCO": 10,
+      "TP": "48OB"
+    },
+    {
+      "EXCLUSE_AR": "29.9100",
+      "GP": "-",
+      "HOUSE_MANAGE_NO": "2026950073",
+      "MODEL_NO": "04",
+      "PBLANC_NO": "2026950073",
+      "SUBSCRPT_REQST_AMOUNT": "300",
+      "SUPLY_AMOUNT": "41150",
+      "SUPLY_HSHLDCO": 1,
+      "TP": "48OA"
+    },
+    {
+      "EXCLUSE_AR": "28.7700",
+      "GP": "-",
+      "HOUSE_MANAGE_NO": "2026950073",
+      "MODEL_NO": "03",
+      "PBLANC_NO": "2026950073",
+      "SUBSCRPT_REQST_AMOUNT": "300",
+      "SUPLY_AMOUNT": "39698",
+      "SUPLY_HSHLDCO": 1,
+      "TP": "46OC"
+    }
+  ]
+}
