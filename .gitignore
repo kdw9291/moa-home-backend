@@ -1,0 +1,38 @@
+# Python virtual environment
+venv/
+.venv/
+env/
+ENV/
+
+# Python cache & bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# Environment variables & secrets (CRITICAL: DO NOT COMMIT)
+.env
+.env.*
+*.pem
+*.key
+
+# Editor & OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# External docs prevention
+docs/
+*.sql
+
+# 원본 응답 샘플(익명화 전, 개인정보·키 위험): 절대 커밋 금지
+*.raw
+.raw_samples/
+
+# 일일 작업 로그(비밀값은 가려지지만 커밋하지 않는다)
+logs/
+
+# 설정 예시는 추적한다(자리표시자만 있다)
+!.env.example

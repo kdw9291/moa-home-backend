@@ -1,0 +1,4 @@
+pytest>=9
+psycopg[binary]>=3.3
+pglast>=8
+requests>=2.32

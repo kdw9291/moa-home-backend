@@ -1,0 +1,49 @@
+name: Sync Cheongyak Data
+
+on:
+  # 로컬 사용 단계: 자동 실행을 끈다. GitHub Actions에서 쓸 Supabase REST(RPC) 저장소가 아직 구현되지 않았고
+  # (현재 수집기는 DATABASE_URL이 필요한데 Actions에는 SUPABASE_URL/SECRET만 전달), Secrets도 설정 전이다.
+  # 그대로 스케줄을 켜면 매일 실패 실행이 쌓인다. 저장소 구현·Secrets 설정 뒤 아래 주석을 풀어 재활성화한다.
+  # schedule:
+  #   # UTC 00:05 = KST 09:05. GitHub does not guarantee punctual execution.
+  #   - cron: '5 0 * * *'
+  # GitHub Actions 탭에서 수동 실행(테스트) 지원
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cheongyak-daily-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Check implementation files
+        run: |
+          test -f requirements.txt
+          test -f src/main.py
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install -r requirements.txt
+
+      - name: Run Collector Pipeline
+        env:
+          DATA_GO_KR_API_KEY: ${{ secrets.DATA_GO_KR_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: |
+          python src/main.py
