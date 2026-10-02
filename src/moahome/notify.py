@@ -196,6 +196,19 @@ def run_reminders(conn, today, sender) -> dict:
     return stats
 
 
+def cleanup_filter_save_requests(conn, days: int = 7) -> int:
+    """필터 저장 RPC의 요청 기록 중 보존 기간(기본 7일)이 지난 것을 삭제한다. 지난 request_id는 재생(replay)되지 않는다.
+
+    클라이언트의 시간 초과 재시도는 수 초~수 분 안에 끝나므로 7일이면 충분하다. 마이그레이션 적용 전 DB에는 테이블이
+    없을 수 있어(알림 발송 작업이 먼저 배포되는 경우) 그때는 아무것도 하지 않는다.
+    """
+    if conn.execute("SELECT to_regclass('public.user_filter_save_requests')").fetchone()[0] is None:
+        return 0
+    return conn.execute(
+        "DELETE FROM public.user_filter_save_requests WHERE created_at < now() - make_interval(days => %s)",
+        (days,)).rowcount
+
+
 def cleanup_expired(conn, days: int = 30) -> int:
     """비활성화된 지 오래된 구독을 삭제한다(연결된 발송 기록도 함께 삭제)."""
     return conn.execute(

@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import psycopg  # noqa: E402
 
-from moahome.notify import cleanup_expired, make_webpush_sender, run_reminders  # noqa: E402
+from moahome.notify import cleanup_expired, cleanup_filter_save_requests, make_webpush_sender, run_reminders  # noqa: E402
 
 KST = timezone(timedelta(hours=9))
 
@@ -23,6 +23,7 @@ def main():
     with psycopg.connect(dsn, autocommit=True) as conn:
         stats = run_reminders(conn, datetime.now(KST).date(), make_webpush_sender(priv, subject))
         stats["cleaned"] = cleanup_expired(conn)
+        stats["filter_requests_cleaned"] = cleanup_filter_save_requests(conn)
     print(" ".join(f"{k}={v}" for k, v in stats.items()))
     sys.exit(1 if stats["failed"] else 0)
 
