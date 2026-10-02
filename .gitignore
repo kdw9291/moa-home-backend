@@ -26,6 +26,10 @@ Thumbs.db
 # External docs prevention
 docs/
 *.sql
+# 단, 실제 적용용 증분 마이그레이션은 저장소가 소유한다(설계 문서 docs/의 스키마 원본은 계속 제외)
+!sql/
+!sql/migrations/
+!sql/migrations/*.sql
 
 # 원본 응답 샘플(익명화 전, 개인정보·키 위험): 절대 커밋 금지
 *.raw
