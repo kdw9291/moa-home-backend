@@ -7,6 +7,8 @@ import threading
 import uuid
 from decimal import Decimal
 
+from moahome.notify import cleanup_filter_save_requests
+
 import psycopg
 import pytest
 from psycopg import errors
@@ -383,3 +385,38 @@ def test_concurrent_retries_of_the_same_request_increment_only_once(db):
     assert sorted(o["replayed"] for o in out) == [False] + [True] * 5
     assert db.execute("SELECT revision FROM public.user_filter_settings WHERE user_id=%s", (U1,)).fetchone()[0] == 1
     assert count_requests(db, U1) == 1
+
+
+# ---------- 요청 기록 정리(E3) ----------
+
+def test_cleanup_removes_only_requests_older_than_the_retention_period(db):
+    db.execute("INSERT INTO public.user_filter_settings(user_id, revision) VALUES (%s, 1)", (U1,))
+    old, recent = str(uuid.uuid4()), str(uuid.uuid4())
+    for rid, age in ((old, "8 days"), (recent, "6 days")):
+        db.execute("INSERT INTO public.user_filter_save_requests(user_id, request_id, request_input, applied_revision, result_current, created_at) "
+                   "VALUES (%s, %s, '{}', 1, '{}', now() - %s::interval)", (U1, rid, age))
+    assert cleanup_filter_save_requests(db) == 1                         # 기본 7일
+    left = [r[0] for r in db.execute("SELECT request_id::text FROM public.user_filter_save_requests WHERE user_id=%s", (U1,)).fetchall()]
+    assert left == [recent]
+    assert db.execute("SELECT revision FROM public.user_filter_settings WHERE user_id=%s", (U1,)).fetchone()[0] == 1   # 설정은 건드리지 않는다
+    assert cleanup_filter_save_requests(db) == 0                         # 다시 실행해도 안전
+
+
+def test_an_expired_request_id_is_no_longer_replayed_but_cannot_double_apply(db):
+    """보존 기간이 지난 ID로 재시도하면 재생되지 않는다: 같은 입력이면 예상 revision이 오래돼 conflict가 되어 이중 반영은 일어나지 않는다."""
+    rid = str(uuid.uuid4())
+    # as_user 는 항상 롤백하므로, 커밋된 상태를 만들려고 트랜잭션을 직접 연다
+    db.autocommit = False
+    try:
+        db.execute("SET LOCAL ROLE authenticated")
+        db.execute("SELECT set_config('request.jwt.claim.sub', %s, true)", (U1,))
+        save(db, exp=0, rid=rid, budget=100)
+        db.commit()
+    finally:
+        db.autocommit = True
+    db.execute("UPDATE public.user_filter_save_requests SET created_at = now() - interval '8 days' WHERE user_id=%s", (U1,))
+    assert cleanup_filter_save_requests(db) == 1
+    with as_user(db, U1) as c:
+        r = save(c, exp=0, rid=rid, budget=100)                          # 만료된 ID 재시도
+        assert r["status"] == "conflict" and r["current"]["revision"] == 1
+        assert c.execute("SELECT revision FROM public.user_filter_settings").fetchone()[0] == 1

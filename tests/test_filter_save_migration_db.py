@@ -194,3 +194,9 @@ def test_add_step_refuses_a_role_that_cannot_bypass_rls(legacy):
     finally:
         legacy.execute("RESET ROLE")
     assert legacy.execute("SELECT to_regclass('public.user_filter_save_requests')").fetchone()[0] is None
+
+
+def test_cleanup_is_a_noop_before_the_add_step(legacy):
+    """알림 발송 작업이 마이그레이션보다 먼저 배포돼도 요청 기록 정리가 실패하지 않는다."""
+    from moahome.notify import cleanup_filter_save_requests
+    assert cleanup_filter_save_requests(legacy) == 0
