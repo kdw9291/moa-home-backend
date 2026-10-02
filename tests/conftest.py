@@ -39,7 +39,7 @@ GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
 
 
 LOCAL_HOSTS = {"127.0.0.1", "localhost", "::1"}
-OUR_TABLES = ["notification_deliveries", "push_subscriptions", "user_bookmarks", "user_filter_settings",
+OUR_TABLES = ["user_filter_save_requests", "notification_deliveries", "push_subscriptions", "user_bookmarks", "user_filter_settings",
               "announcement_events", "housing_type_special_supply", "cheongyak_housing_types",
               "cheongyak_announcements", "sync_runs", "data_status"]
 
