@@ -25,6 +25,8 @@ def main():
         stats["cleaned"] = cleanup_expired(conn)
         stats["filter_requests_cleaned"] = cleanup_filter_save_requests(conn)
     print(" ".join(f"{k}={v}" for k, v in stats.items()))
+    # unrecorded(발송은 됐지만 결과 기록을 못 남김)는 일부러 실패 종료로 만들지 않는다: 작업 스케줄러의 재시도가 pending 행을 다시 발송할 수 있다.
+    # 로그의 unrecorded 값으로 확인한다.
     sys.exit(1 if stats["failed"] else 0)
 
 

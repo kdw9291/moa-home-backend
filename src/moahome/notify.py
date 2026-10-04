@@ -8,8 +8,11 @@
 - 오류 기록에는 예외 종류와 상태 코드만 남긴다(엔드포인트 URL은 개인 식별 가능 값이라 로그 금지).
 """
 import json
+import time
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
+
+import psycopg
 
 # 접수 시작 알림 대상 이벤트(백엔드 매퍼가 원천 필드 접두어에서 딴 임시 코드 중 접수 계열)
 RECEIPT_CODES = ["rcept", "spsply_rcept", "gnrl_rcept", "subscrpt_rcept", "gnrl_rnk1", "gnrl_rnk2"]
@@ -24,6 +27,8 @@ STAGE_LABEL = {
 }
 RETRY_AFTER_MINUTES = 10
 SEND_TIMEOUT_SECONDS = 30
+FINISH_RETRIES = 3          # 발송 직후 결과 기록이 일시 오류로 실패해도 같은 실행 안에서 다시 시도한다(기록 실패 → pending 남음 → 재발송 방지)
+_sleep = time.sleep         # 테스트에서 대기 없이 검증하려고 모듈 변수로 둔다
 
 
 @dataclass
@@ -170,9 +175,21 @@ def make_webpush_sender(vapid_private_raw: str, subject: str):
     return send
 
 
+def _finish_with_retry(conn, t: Target, today, status: str) -> bool:
+    """발송 결과 기록. 일시적인 DB 오류는 짧게 기다려 다시 시도한다(0.5초·1초·2초). 모두 실패하면 마지막 예외를 올린다."""
+    for i in range(FINISH_RETRIES):
+        try:
+            return finish(conn, t, today, status)
+        except psycopg.Error:
+            if i == FINISH_RETRIES - 1:
+                raise
+            _sleep(0.5 * 2 ** i)
+    return False
+
+
 def run_reminders(conn, today, sender) -> dict:
     """today: KST 날짜. sender(target, payload) -> 'sent'|'expired'|'failed'. conn은 autocommit."""
-    stats = {"targets": 0, "claimed": 0, "sent": 0, "failed": 0, "expired": 0, "skipped": 0, "lost_claim": 0}
+    stats = {"targets": 0, "claimed": 0, "sent": 0, "failed": 0, "expired": 0, "skipped": 0, "lost_claim": 0, "unrecorded": 0}
     due = due_targets(conn, today)
     seen = {(t.subscription_id, t.announcement_id) for t in due}
     # 같은 기기·공고에 오늘 알림이 이미 예정돼 있으면 어제 실패분을 따로 보내지 않는다(하루에 한 번만)
@@ -189,7 +206,13 @@ def run_reminders(conn, today, sender) -> dict:
             status = "failed"
         if status not in ("sent", "expired", "failed"):
             status = "failed"
-        if finish(conn, t, today, status):
+        try:
+            recorded = _finish_with_retry(conn, t, today, status)
+        except psycopg.Error:
+            # 기록을 끝내 남기지 못했다(DB 장애 지속). 행은 pending으로 남아 10분 뒤 재점유될 수 있다 — 같은 실행의 다른 대상은 계속 처리한다.
+            stats["unrecorded"] += 1
+            continue
+        if recorded:
             stats[status] += 1
         else:
             stats["lost_claim"] += 1  # 다른 실행이 재점유함: 결과를 덮어쓰지 않는다
