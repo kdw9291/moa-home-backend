@@ -306,3 +306,45 @@ def test_carried_payload_uses_stage_name_without_saying_today():
     body = build_payload(t, date(2026, 9, 30))["body"]
     assert "1순위 접수가 시작된 관심 공고" in body and "오늘부터" not in body
     assert "시각" not in body and "자격" not in body and "공식 공고" in body
+
+
+# ---- 발송 결과 기록의 일시 오류(재리뷰 반영) ----
+import psycopg  # noqa: E402
+
+from moahome import notify as notify_mod  # noqa: E402
+
+
+def _flaky_finish(monkeypatch, fail_times):
+    real, calls = notify_mod.finish, {"n": 0}
+
+    def wrapper(conn, t, today, status):
+        calls["n"] += 1
+        if calls["n"] <= fail_times:
+            raise psycopg.OperationalError("일시 DB 오류")
+        return real(conn, t, today, status)
+
+    monkeypatch.setattr(notify_mod, "finish", wrapper)
+    monkeypatch.setattr(notify_mod, "_sleep", lambda s: None)    # 재시도 대기를 건너뛴다
+    return calls
+
+
+def test_transient_finish_errors_are_retried_so_the_delivery_is_recorded_as_sent(db, monkeypatch):
+    a = ann(db, "오늘 접수", [("rcept", "all", "2026-09-29", "2026-09-30")])
+    sub(db, U1); bookmark(db, U1, a)
+    calls = _flaky_finish(monkeypatch, fail_times=2)             # 처음 두 번 기록 실패, 세 번째 성공
+    s = Sender()
+    st = run_reminders(db, TODAY, s)
+    assert st["sent"] == 1 and st["unrecorded"] == 0 and len(s.calls) == 1 and calls["n"] == 3
+    assert rows(db) == [("sent", EVENT_CODE, TODAY)]             # pending이 남지 않으므로 이후 재시도에서 다시 보내지 않는다
+    assert run_reminders(db, TODAY, s)["sent"] == 0 and len(s.calls) == 1
+
+
+def test_persistent_finish_errors_do_not_stop_other_targets_and_are_counted(db, monkeypatch):
+    a1 = ann(db, "공고1", [("rcept", "all", "2026-09-29", "2026-09-30")], no="1")
+    a2 = ann(db, "공고2", [("rcept", "all", "2026-09-29", "2026-09-30")], no="2")
+    sub(db, U1); bookmark(db, U1, a1); bookmark(db, U1, a2)
+    _flaky_finish(monkeypatch, fail_times=3)                     # 첫 대상은 세 번 모두 실패, 둘째는 성공
+    s = Sender()
+    st = run_reminders(db, TODAY, s)
+    assert st["unrecorded"] == 1 and st["sent"] == 1 and len(s.calls) == 2   # 예외로 실행 전체가 중단되지 않는다
+    assert sorted(r[0] for r in rows(db)) == ["pending", "sent"]             # 기록 못 한 것은 pending(알려진 한계)

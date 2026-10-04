@@ -144,6 +144,36 @@ def test_info_checks(db):
         assert r.hits == n and r.check.level == "info", key
 
 
+def test_duplicate_suspect_also_catches_missing_dates_and_samples_are_stable(db):
+    ann(db, family="remndr", name="날짜 없는 중복", rcrit=None)
+    ann(db, family="remndr", name="날짜 없는 중복", rcrit=None)
+    ann(db, family="remndr", name="날짜 없는 단독", rcrit=None)
+    r = hits(db, "duplicate_suspect")
+    assert r.hits == 2 and r.total == 3
+    assert [x for x in r.samples] == sorted(r.samples)                   # 표본은 정렬되어 실행마다 같다
+
+
+def test_special_sum_denominator_counts_only_checkable_housing_types(db):
+    a = ann(db)
+    h1 = ht(db, a, key="01", supply=100, price=500_000_000, special=10)
+    h2 = ht(db, a, key="02", supply=100, price=500_000_000, special=None)   # 범주는 있지만 합계가 없어 검사할 수 없다
+    db.execute("INSERT INTO public.housing_type_special_supply VALUES (%s,'신혼',3),(%s,'신혼',3)", (h1, h2))
+    r = hits(db, "special_sum_mismatch")
+    assert r.total == 1 and r.hits == 1
+
+
+def test_cli_entry_point_prints_the_report_and_exits_cleanly(db, tmp_path):
+    import subprocess
+    import sys
+    good_apt(db)
+    env = {**os.environ, "DATABASE_URL": os.environ["TEST_DATABASE_URL"], "PYTHONIOENCODING": "utf-8"}
+    src = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src", "quality_main.py")
+    p = subprocess.run([sys.executable, src, "--samples", "2"], capture_output=True, text=True, encoding="utf-8", env=env, timeout=60)
+    assert p.returncode == 0, p.stderr
+    assert "수집 데이터 품질 점검" in p.stdout and "계열별 규모와 확인률" in p.stdout
+    assert os.environ["TEST_DATABASE_URL"] not in p.stdout + p.stderr         # 접속 정보는 출력되지 않는다
+
+
 def test_report_text_and_read_only(db):
     good_apt(db)
     ann(db, name="주택형 없는 공고")
