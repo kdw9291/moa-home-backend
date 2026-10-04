@@ -27,7 +27,7 @@ STAGE_LABEL = {
 }
 RETRY_AFTER_MINUTES = 10
 SEND_TIMEOUT_SECONDS = 30
-FINISH_RETRIES = 3          # 발송 직후 결과 기록이 일시 오류로 실패해도 같은 실행 안에서 다시 시도한다(기록 실패 → pending 남음 → 재발송 방지)
+FINISH_RETRIES = 3          # 발송 직후 결과 기록이 일시 오류로 실패해도 같은 실행 안에서 다시 시도한다(총 3번 시도, 사이에 0.5초·1초 대기)
 _sleep = time.sleep         # 테스트에서 대기 없이 검증하려고 모듈 변수로 둔다
 
 
@@ -176,7 +176,7 @@ def make_webpush_sender(vapid_private_raw: str, subject: str):
 
 
 def _finish_with_retry(conn, t: Target, today, status: str) -> bool:
-    """발송 결과 기록. 일시적인 DB 오류는 짧게 기다려 다시 시도한다(0.5초·1초·2초). 모두 실패하면 마지막 예외를 올린다."""
+    """발송 결과 기록. 일시적인 DB 오류는 짧게 기다려 다시 시도한다(총 3번, 시도 사이 0.5초·1초). 모두 실패하면 마지막 예외를 올린다."""
     for i in range(FINISH_RETRIES):
         try:
             return finish(conn, t, today, status)
@@ -217,6 +217,15 @@ def run_reminders(conn, today, sender) -> dict:
         else:
             stats["lost_claim"] += 1  # 다른 실행이 재점유함: 결과를 덮어쓰지 않는다
     return stats
+
+
+def run_exit_code(stats: dict) -> int:
+    """일일 알림 단계의 종료 코드. 발송 실패(failed)뿐 아니라 '보냈지만 결과를 못 남김'(unrecorded)도 실패로 알린다.
+
+    작업 스케줄러에는 자동 재시작이 없다(전체 재실행은 pending 행을 재발송할 수 있다). 그래서 실패는 스케줄러의 마지막 결과 코드와
+    로그로만 보이며, 다음 정시 실행에서 failed 는 재시도되고 pending 은 10분 뒤 재점유 대상이 된다.
+    """
+    return 1 if (stats.get("failed") or stats.get("unrecorded")) else 0
 
 
 def cleanup_filter_save_requests(conn, days: int = 7) -> int:
