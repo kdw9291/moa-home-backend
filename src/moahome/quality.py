@@ -74,7 +74,7 @@ def checks(today: date) -> list[Check]:
               f"FROM {E} e JOIN {A} a ON a.id = e.announcement_id WHERE (e.starts_on IS NOT NULL AND (e.starts_on < DATE '2000-01-01' OR e.starts_on > (DATE '{d}' + interval '2 years')::date)) OR (e.ends_on IS NOT NULL AND (e.ends_on < DATE '2000-01-01' OR e.ends_on > (DATE '{d}' + interval '2 years')::date))",
               "연도 오타나 날짜 파싱 오류가 의심된다."),
         Check("special_sum_mismatch", "특별공급 범주별 합계가 주택형 특별공급 수와 다른 주택형", "warn",
-              f"SELECT count(DISTINCT s.housing_type_id) FROM {S} s",
+              f"SELECT count(DISTINCT s.housing_type_id) FROM {S} s JOIN {H} h ON h.id = s.housing_type_id WHERE h.special_supply_count IS NOT NULL",
               f"FROM {H} h JOIN {A} a ON a.id = h.announcement_id WHERE h.special_supply_count IS NOT NULL AND EXISTS (SELECT 1 FROM {S} s WHERE s.housing_type_id = h.id) AND (SELECT sum(s.supply_count) FROM {S} s WHERE s.housing_type_id = h.id) <> h.special_supply_count",
               "범주 매핑 누락이나 합산 규칙 차이일 수 있다."),
         Check("stale_but_active", "7일 넘게 수집되지 않았는데 아직 일정이 남은 공고", "warn", f"SELECT count(*) FROM {A}",
@@ -101,7 +101,7 @@ def checks(today: date) -> list[Check]:
               "공고 원문 링크는 항상 노출해야 한다."),
         Check("duplicate_suspect", "같은 계열·이름·모집공고일이 겹치는 공고(중복 의심)", "info",
               f"SELECT count(*) FROM {A}",
-              f"FROM {A} a WHERE (a.source_family, a.house_nm, a.rcrit_pblanc_de) IN (SELECT source_family, house_nm, rcrit_pblanc_de FROM {A} GROUP BY 1,2,3 HAVING count(*) > 1)",
+              f"FROM {A} a WHERE EXISTS (SELECT 1 FROM {A} b WHERE b.id <> a.id AND b.source_family = a.source_family AND b.house_nm = a.house_nm AND b.rcrit_pblanc_de IS NOT DISTINCT FROM a.rcrit_pblanc_de)",
               "정정·재공고일 수 있다. 같은 단지가 중복 노출되는지 확인."),
     ]
 
@@ -127,7 +127,7 @@ def run_checks(conn, today: date, sample_limit: int = 5) -> list[Result]:
         hits = conn.execute(f"SELECT count(*) {c.hit_from}").fetchone()[0]
         samples = []
         if hits and sample_limit > 0:
-            samples = [r[0] for r in conn.execute(f"SELECT {LABEL} {c.hit_from} ORDER BY a.house_manage_no, a.pblanc_no LIMIT %s", (sample_limit,)).fetchall()]
+            samples = [r[0] for r in conn.execute(f"SELECT {LABEL} {c.hit_from} ORDER BY 1 LIMIT %s", (sample_limit,)).fetchall()]
         out.append(Result(c, total, hits, samples))
     return out
 
