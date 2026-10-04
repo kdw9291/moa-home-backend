@@ -348,3 +348,12 @@ def test_persistent_finish_errors_do_not_stop_other_targets_and_are_counted(db, 
     st = run_reminders(db, TODAY, s)
     assert st["unrecorded"] == 1 and st["sent"] == 1 and len(s.calls) == 2   # 예외로 실행 전체가 중단되지 않는다
     assert sorted(r[0] for r in rows(db)) == ["pending", "sent"]             # 기록 못 한 것은 pending(알려진 한계)
+
+
+def test_exit_code_reports_failed_and_unrecorded_but_not_clean_runs():
+    from moahome.notify import run_exit_code
+    clean = {"failed": 0, "unrecorded": 0, "sent": 3, "skipped": 1}
+    assert run_exit_code(clean) == 0
+    assert run_exit_code({**clean, "failed": 1}) == 1
+    assert run_exit_code({**clean, "unrecorded": 1}) == 1          # 보냈지만 기록 못 남김도 스케줄러 결과 코드에 나타난다
+    assert run_exit_code({"sent": 0}) == 0                          # 키가 없어도 안전
