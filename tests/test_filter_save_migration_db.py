@@ -200,3 +200,17 @@ def test_cleanup_is_a_noop_before_the_add_step(legacy):
     """알림 발송 작업이 마이그레이션보다 먼저 배포돼도 요청 기록 정리가 실패하지 않는다."""
     from moahome.notify import cleanup_filter_save_requests
     assert cleanup_filter_save_requests(legacy) == 0
+
+
+def test_rollback_restores_the_state_after_the_add_step_only(admin_url, fresh_db):
+    """회수 단계를 되돌리는 SQL 은 '추가 단계만 적용한 상태'와 같은 정책·권한으로 되돌린다(함수·요청 기록 테이블은 유지)."""
+    fresh_db.execute(legacy_schema())
+    run_script(fresh_db, migration("_add"))
+    only_add = snapshot(fresh_db)
+    run_script(fresh_db, migration("_revoke"))
+    assert snapshot(fresh_db) != only_add                       # 회수 단계는 실제로 상태를 바꾼다
+    run_script(fresh_db, migration("_rollback"))
+    assert snapshot(fresh_db) == only_add
+    run_script(fresh_db, migration("_rollback"))                # 여러 번 실행해도 같다
+    assert snapshot(fresh_db) == only_add
+    assert can(fresh_db, "authenticated", "SELECT 1 FROM public.user_filter_settings", None)
